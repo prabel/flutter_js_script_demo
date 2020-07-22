@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'package:flutter_liquidcore/liquidcore.dart';
 
 void main() {
   runApp(MyApp());
@@ -27,19 +26,10 @@ class ExamplePage extends StatefulWidget {
 
 class _ExamplePageState extends State<ExamplePage> {
   final TextEditingController _textEditingController = TextEditingController();
-  final FlutterWebviewPlugin _flutterWebviewPlugin = FlutterWebviewPlugin();
 
   String _signedMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    final htmlString = Uri.dataFromString(
-            '<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script><html><body>hello world</body></html>',
-            mimeType: 'text/html')
-        .toString();
-    _flutterWebviewPlugin.launch(htmlString, withJavascript: true, hidden: true);
-  }
+  JSContext _jsContext;
 
   @override
   Widget build(BuildContext context) {
@@ -73,15 +63,57 @@ class _ExamplePageState extends State<ExamplePage> {
 
   Future<void> _signMessage() async {
     try {
-      var givenJS = await rootBundle.loadString('assets/example.js');
-      givenJS = givenJS.replaceAll("test_message", _textEditingController.value.text);
+      var givenJS = '''
+          async function js_function(message) {
+            var Web3 = await require('web3');
+            var web3 = new Web3();
+            var account = web3.eth.accounts.create();
+            var signedMessage = web3.eth.accounts.sign("asdasd", account.privateKey);
+            return signedMessage;
+          }
+          
+          js_function('test_message');
+      ''';
+//      givenJS = givenJS.replaceAll("test_message", _textEditingController.value.text);
 
-      _signedMessage = await _flutterWebviewPlugin.evalJavascript(givenJS);
-      print("Test -> $_signedMessage");
+      _jsContext = JSContext();
+      final response = await _jsContext.evaluateScript(givenJS);
+      print("Test -> $response");
       setState(() {});
     } catch (e) {
       print("Error -> $e");
       print(e.toString());
     }
   }
+//
+//  Future<void> test()async {
+//    _microService = MicroService(uri);
+//    await _microService.addEventListener('ready',
+//                    (service, event, eventPayload) {
+//              // The service is ready.
+//              if (!mounted) {
+//                return;
+//              }
+//              //_emit();
+//            });
+//    await _microService.addEventListener('pong',
+//                    (service, event, eventPayload) {
+//              if (!mounted) {
+//                return;
+//              }
+//
+//              _setMicroServiceResponse(eventPayload['message'] as String);
+//            });
+//    await _microService.addEventListener('object',
+//                    (service, event, eventPayload) {
+//              if (!mounted) {
+//                return;
+//              }
+//
+//              print("received obj: $eventPayload | type: ${eventPayload.runtimeType}");
+//            });
+//
+//    // Start the service.
+//    await _microService.start();
+//  }
 }
