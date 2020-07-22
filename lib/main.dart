@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'package:flutter_jscore/flutter_jscore.dart';
 
 void main() {
   runApp(MyApp());
@@ -27,18 +27,21 @@ class ExamplePage extends StatefulWidget {
 
 class _ExamplePageState extends State<ExamplePage> {
   final TextEditingController _textEditingController = TextEditingController();
-  final FlutterWebviewPlugin _flutterWebviewPlugin = FlutterWebviewPlugin();
 
   String _signedMessage;
+  JSContext _jsContext;
 
   @override
   void initState() {
     super.initState();
-    final htmlString = Uri.dataFromString(
-            '<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script><html><body>hello world</body></html>',
-            mimeType: 'text/html')
-        .toString();
-    _flutterWebviewPlugin.launch(htmlString, withJavascript: true, hidden: true);
+    _jsContext = JSContext.createInGroup();
+  }
+
+  @override
+  void dispose() {
+    _jsContext.release();
+    _textEditingController.dispose();
+    super.dispose();
   }
 
   @override
@@ -75,8 +78,7 @@ class _ExamplePageState extends State<ExamplePage> {
     try {
       var givenJS = await rootBundle.loadString('assets/example.js');
       givenJS = givenJS.replaceAll("test_message", _textEditingController.value.text);
-
-      _signedMessage = await _flutterWebviewPlugin.evalJavascript(givenJS);
+      _signedMessage = _jsContext.evaluate(givenJS).string;
       print("Test -> $_signedMessage");
       setState(() {});
     } catch (e) {
